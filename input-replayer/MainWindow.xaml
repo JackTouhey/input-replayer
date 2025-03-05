@@ -1,0 +1,28 @@
+﻿<Window x:Class="input_replayer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Input Recorder" Height="450" Width="800">
+    <Grid>
+        <StackPanel Margin="20">
+            <Button Content="Start Recording" 
+                    Click="StartRecording_Click" 
+                    Margin="0,0,0,10" 
+                    Padding="10,5"/>
+
+            <Button Content="Stop Recording" 
+                    Click="StopRecording_Click" 
+                    Margin="0,0,0,10" 
+                    Padding="10,5"/>
+
+            <Button Content="Replay Recording" 
+                    Click="ReplayRecording_Click" 
+                    Margin="0,0,0,10" 
+                    Padding="10,5"/>
+
+            <Button Content="Clear Recording" 
+                    Click="ClearRecording_Click" 
+                    Margin="0,0,0,10" 
+                    Padding="10,5"/>
+        </StackPanel>
+    </Grid>
+</Window>
