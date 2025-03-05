@@ -12,3 +12,6 @@ C:\Users\jt112\source\repos\input-replayer\input-replayer\bin\Debug\input-replay
 C:\Users\jt112\source\repos\input-replayer\input-replayer\bin\Debug\input-replayer.pdb
 C:\Users\jt112\source\repos\input-replayer\input-replayer\obj\Debug\input-replayer.exe
 C:\Users\jt112\source\repos\input-replayer\input-replayer\obj\Debug\input-replayer.pdb
+C:\Users\jt112\source\repos\input-replayer\input-replayer\bin\Debug\Newtonsoft.Json.dll
+C:\Users\jt112\source\repos\input-replayer\input-replayer\bin\Debug\Newtonsoft.Json.xml
+C:\Users\jt112\source\repos\input-replayer\input-replayer\obj\Debug\input-re.32DE5B1A.Up2Date

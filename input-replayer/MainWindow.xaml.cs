@@ -15,164 +15,320 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Timers;
 using System.Windows.Threading;
+using Microsoft.Win32;
+using Newtonsoft.Json;
 
 namespace input_replayer
 {
-    // Structure to store recorded input events
-    public class InputEvent
-    {
-        public DateTime Timestamp { get; set; }
-        public InputType Type { get; set; }
-        public int X { get; set; }
-        public int Y { get; set; }
-        public Key? KeyPressed { get; set; }
-        public MouseButton? MouseButton { get; set; }
-    }
-
-    public enum InputType
+    public enum InputEventType
     {
         MouseMove,
-        MouseClick,
-        KeyPress
+        MouseLeftClick,
+        MouseRightClick,
+        KeyPress,
+        KeyRelease
+    }
+
+    public class RecordedInputEvent
+    {
+        public DateTime Timestamp { get; set; }
+        public InputEventType EventType { get; set; }
+        public int PositionX { get; set; }
+        public int PositionY { get; set; }
+        public int VirtualKeyCode { get; set; }
+        public bool IsExtendedKey { get; set; }
     }
 
     public partial class MainWindow : Window
     {
-        private List<InputEvent> recordedEvents = new List<InputEvent>();
-        private bool isRecording = false;
-        private bool isReplaying = false;
+        // Win32 API Constants
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WH_MOUSE_LL = 14;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_KEYUP = 0x0101;
+        private const int WM_MOUSEMOVE = 0x0200;
+        private const int WM_LBUTTONDOWN = 0x0201;
+        private const int WM_LBUTTONUP = 0x0202;
+        private const int WM_RBUTTONDOWN = 0x0204;
+        private const int WM_RBUTTONUP = 0x0205;
 
-        // Win32 API imports for low-level input simulation
+        // Input simulation flags
+        private const int MOUSEEVENTF_MOVE = 0x0001;
+        private const int MOUSEEVENTF_LEFTDOWN = 0x0002;
+        private const int MOUSEEVENTF_LEFTUP = 0x0004;
+        private const int MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        private const int MOUSEEVENTF_RIGHTUP = 0x0010;
+        private const int KEYEVENTF_KEYUP = 0x0002;
+
+        // Native method imports for input simulation and hooking
         [DllImport("user32.dll")]
-        static extern bool SetCursorPos(int X, int Y);
+        private static extern int SetCursorPos(int x, int y);
 
         [DllImport("user32.dll")]
-        static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, int dwExtraInfo);
+        private static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
 
         [DllImport("user32.dll")]
-        static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
+
+        // Hook-related fields
+        private IntPtr _keyboardHookHandle = IntPtr.Zero;
+        private IntPtr _mouseHookHandle = IntPtr.Zero;
+        private NativeMethods.LowLevelKeyboardProc _keyboardHookProcedure;
+        private NativeMethods.LowLevelMouseProc _mouseHookProcedure;
+
+        // Recording management
+        private List<RecordedInputEvent> _recordedInputEvents = new List<RecordedInputEvent>();
+        private bool _isRecordingInputEvents = false;
 
         public MainWindow()
         {
             InitializeComponent();
-            SetupEventHandlers();
         }
 
-        private void SetupEventHandlers()
+        private IntPtr ProcessMouseInput(int nCode, IntPtr wParam, IntPtr lParam)
         {
-            // Mouse move tracking
-            MouseMove += (s, e) =>
+            if (nCode >= 0 && _isRecordingInputEvents)
             {
-                if (isRecording)
-                {
-                    recordedEvents.Add(new InputEvent
-                    {
-                        Timestamp = DateTime.Now,
-                        Type = InputType.MouseMove,
-                        X = (int)e.GetPosition(this).X,
-                        Y = (int)e.GetPosition(this).Y
-                    });
-                }
-            };
+                var mouseData = (NativeMethods.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(NativeMethods.MSLLHOOKSTRUCT));
 
-            // Mouse click tracking
-            MouseDown += (s, e) =>
-            {
-                if (isRecording)
+                InputEventType eventType;
+                if (wParam == (IntPtr)WM_MOUSEMOVE)
                 {
-                    recordedEvents.Add(new InputEvent
-                    {
-                        Timestamp = DateTime.Now,
-                        Type = InputType.MouseClick,
-                        X = (int)e.GetPosition(this).X,
-                        Y = (int)e.GetPosition(this).Y,
-                        MouseButton = e.ChangedButton
-                    });
+                    eventType = InputEventType.MouseMove;
                 }
-            };
+                else if (wParam == (IntPtr)WM_LBUTTONDOWN)
+                {
+                    eventType = InputEventType.MouseLeftClick;
+                }
+                else if (wParam == (IntPtr)WM_RBUTTONDOWN)
+                {
+                    eventType = InputEventType.MouseRightClick;
+                }
+                else
+                {
+                    eventType = InputEventType.MouseMove;
+                }
 
-            // Keyboard tracking
-            PreviewKeyDown += (s, e) =>
-            {
-                if (isRecording)
+                _recordedInputEvents.Add(new RecordedInputEvent
                 {
-                    recordedEvents.Add(new InputEvent
-                    {
-                        Timestamp = DateTime.Now,
-                        Type = InputType.KeyPress,
-                        KeyPressed = e.Key
-                    });
-                }
-            };
+                    Timestamp = DateTime.Now,
+                    EventType = eventType,
+                    PositionX = mouseData.pt.x,
+                    PositionY = mouseData.pt.y
+                });
+            }
+
+            return NativeMethods.CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
         }
 
         private void StartRecording_Click(object sender, RoutedEventArgs e)
         {
-            recordedEvents.Clear();
-            isRecording = true;
-            MessageBox.Show("Recording started. Perform actions you want to record.");
+            if (!_isRecordingInputEvents)
+            {
+                _recordedInputEvents.Clear();
+                _isRecordingInputEvents = true;
+
+                // Setup keyboard hook
+                _keyboardHookProcedure = ProcessKeyboardInput;
+                _keyboardHookHandle = SetKeyboardHook(_keyboardHookProcedure);
+
+                // Setup mouse hook
+                _mouseHookProcedure = ProcessMouseInput;
+                _mouseHookHandle = SetMouseHook(_mouseHookProcedure);
+
+                StatusText.Text = "Recording global input events...";
+            }
         }
 
         private void StopRecording_Click(object sender, RoutedEventArgs e)
         {
-            isRecording = false;
-            MessageBox.Show($"Recording stopped. {recordedEvents.Count} events recorded.");
+            if (_isRecordingInputEvents)
+            {
+                // Unhook both keyboard and mouse
+                NativeMethods.UnhookWindowsHookEx(_keyboardHookHandle);
+                NativeMethods.UnhookWindowsHookEx(_mouseHookHandle);
+
+                _isRecordingInputEvents = false;
+                StatusText.Text = $"Recording stopped. Captured {_recordedInputEvents.Count} events.";
+            }
+        }
+
+        private IntPtr SetKeyboardHook(NativeMethods.LowLevelKeyboardProc procedure)
+        {
+            using (var currentProcess = System.Diagnostics.Process.GetCurrentProcess())
+            using (var currentModule = currentProcess.MainModule)
+            {
+                return NativeMethods.SetWindowsHookEx(
+                    WH_KEYBOARD_LL,
+                    procedure,
+                    NativeMethods.GetModuleHandle(currentModule.ModuleName),
+                    0
+                );
+            }
+        }
+
+        private IntPtr SetMouseHook(NativeMethods.LowLevelMouseProc procedure)
+        {
+            using (var currentProcess = System.Diagnostics.Process.GetCurrentProcess())
+            using (var currentModule = currentProcess.MainModule)
+            {
+                return NativeMethods.SetWindowsHookEx(
+                    WH_MOUSE_LL,
+                    procedure,
+                    NativeMethods.GetModuleHandle(currentModule.ModuleName),
+                    0
+                );
+            }
+        }
+
+        private IntPtr ProcessKeyboardInput(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0 && _isRecordingInputEvents)
+            {
+                var keyboardData = (NativeMethods.KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(NativeMethods.KBDLLHOOKSTRUCT));
+
+                InputEventType eventType = (wParam == (IntPtr)WM_KEYDOWN)
+                    ? InputEventType.KeyPress
+                    : InputEventType.KeyRelease;
+
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = eventType,
+                    VirtualKeyCode = (int)keyboardData.vkCode,
+                    IsExtendedKey = (keyboardData.flags & 0x01) != 0
+                });
+            }
+
+            return NativeMethods.CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
+        }
+
+        private void SaveRecording_Click(object sender, RoutedEventArgs e)
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
+                DefaultExt = "json"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                var jsonEvents = JsonConvert.SerializeObject(_recordedInputEvents, Formatting.Indented);
+                System.IO.File.WriteAllText(saveFileDialog.FileName, jsonEvents);
+                MessageBox.Show("Events saved successfully!");
+            }
+        }
+
+        private void LoadRecording_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                var jsonContent = System.IO.File.ReadAllText(openFileDialog.FileName);
+                _recordedInputEvents = JsonConvert.DeserializeObject<List<RecordedInputEvent>>(jsonContent);
+                StatusText.Text = $"Loaded {_recordedInputEvents.Count} events.";
+            }
         }
 
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
-            if (recordedEvents.Count == 0)
+            if (_recordedInputEvents.Count == 0)
             {
-                MessageBox.Show("No recording to replay.");
+                MessageBox.Show("No events to replay.");
                 return;
             }
 
-            isReplaying = true;
-            DateTime baseTime = recordedEvents[0].Timestamp;
+            DateTime baseTime = _recordedInputEvents[0].Timestamp;
 
-            foreach (var inputEvent in recordedEvents)
+            foreach (var inputEvent in _recordedInputEvents)
             {
                 // Calculate time since first event
                 TimeSpan delay = inputEvent.Timestamp - baseTime;
                 await Task.Delay(delay);
 
-                // Simulate input based on event type
-                switch (inputEvent.Type)
+                switch (inputEvent.EventType)
                 {
-                    case InputType.MouseMove:
-                        SetCursorPos(inputEvent.X, inputEvent.Y);
+                    case InputEventType.MouseMove:
+                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         break;
 
-                    case InputType.MouseClick:
-                        // Simulate mouse click (you might need to add more complex mouse event simulation)
-                        SetCursorPos(inputEvent.X, inputEvent.Y);
-                        mouse_event(0x0002, 0, 0, 0, 0); // Left button down
-                        mouse_event(0x0004, 0, 0, 0, 0); // Left button up
+                    case InputEventType.MouseLeftClick:
+                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                         break;
 
-                    case InputType.KeyPress:
-                        // Basic key press simulation (incomplete, requires more robust implementation)
-                        // This is a simplified example and won't work for all keys
-                        if (inputEvent.KeyPressed.HasValue)
-                        {
-                            // You'd need to convert Key to virtual key code
-                            // This is just a placeholder
-                            // keybd_event(VkKeyScan((char)inputEvent.KeyPressed.Value), 0, 0, 0);
-                        }
+                    case InputEventType.MouseRightClick:
+                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                        break;
+
+                    case InputEventType.KeyPress:
+                        keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
+                        break;
+
+                    case InputEventType.KeyRelease:
+                        keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
                         break;
                 }
-
-                if (!isReplaying) break;
             }
 
-            isReplaying = false;
             MessageBox.Show("Replay completed.");
         }
 
-        private void ClearRecording_Click(object sender, RoutedEventArgs e)
+        // Native methods class (kept from previous implementation)
+        private static class NativeMethods
         {
-            recordedEvents.Clear();
-            MessageBox.Show("Recorded events cleared.");
+            [StructLayout(LayoutKind.Sequential)]
+            public struct POINT
+            {
+                public int x;
+                public int y;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct MSLLHOOKSTRUCT
+            {
+                public POINT pt;
+                public uint mouseData;
+                public uint flags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+
+            [StructLayout(LayoutKind.Sequential)]
+            public struct KBDLLHOOKSTRUCT
+            {
+                public uint vkCode;
+                public uint scanCode;
+                public uint flags;
+                public uint time;
+                public IntPtr dwExtraInfo;
+            }
+
+            public delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+            public delegate IntPtr LowLevelMouseProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, IntPtr hMod, uint dwThreadId);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            public static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+            [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+            [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+            public static extern IntPtr GetModuleHandle(string lpModuleName);
         }
     }
 }
