@@ -1,4 +1,8 @@
 ﻿.vs/਍ⸯ獶਍
+.vs/
 packages/
 obj/
 bin/
+input-replayer/bin/
+input-replayer/obj/
+input-replayer/obj/Debug
