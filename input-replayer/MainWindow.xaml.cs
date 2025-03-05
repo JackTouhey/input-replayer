@@ -246,10 +246,7 @@ namespace input_replayer
 
             foreach (var inputEvent in _recordedInputEvents)
             {
-                // Calculate time since first event
-                TimeSpan delay = inputEvent.Timestamp - baseTime;
-                await Task.Delay(delay);
-
+                await Task.Delay(100);
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
