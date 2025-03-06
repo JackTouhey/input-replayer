@@ -6,3 +6,8 @@ bin/
 input-replayer/bin/
 input-replayer/obj/
 input-replayer/obj/Debug
+
+bin\
+obj\
+input-replayer\bin\
+input-replayer\obj\
