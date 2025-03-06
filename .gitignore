@@ -8,5 +8,7 @@ input-replayer/obj/Debug/
 
 bin\Debug\
 obj\Debug\
-input-replayer\bin\Debug\
-input-replayer\obj\Debug\
+input-replayer\input-replayer\bin\Debug\
+input-replayer\input-replayer\obj\Debug\
+input-replayer\input-replayer\bin\
+input-replayer\input-replayer\obj\
