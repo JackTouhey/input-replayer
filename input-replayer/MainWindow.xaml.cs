@@ -251,7 +251,7 @@ namespace input_replayer
 
             foreach (var inputEvent in _recordedInputEvents)
             {
-                await Task.Delay(replaySpeed);
+                
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
@@ -259,22 +259,26 @@ namespace input_replayer
                         break;
 
                     case InputEventType.MouseLeftClick:
+                        await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
                         mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                         break;
 
                     case InputEventType.MouseRightClick:
+                        await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
                         mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
                         break;
 
                     case InputEventType.KeyPress:
+                        await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
                         break;
 
                     case InputEventType.KeyRelease:
+                        await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
                         break;
                 }
