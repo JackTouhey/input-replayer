@@ -29,8 +29,6 @@ namespace input_replayer
         KeyRelease
     }
 
-    
-
     public class RecordedInputEvent
     {
         public DateTime Timestamp { get; set; }
@@ -246,8 +244,6 @@ namespace input_replayer
                 MessageBox.Show("No events to replay.");
                 return;
             }
-            
-            DateTime baseTime = _recordedInputEvents[0].Timestamp;
 
             foreach (var inputEvent in _recordedInputEvents)
             {
@@ -256,6 +252,11 @@ namespace input_replayer
                 {
                     case InputEventType.MouseMove:
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                        int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
+                        if (_recordedInputEvents[nextItem].EventType != InputEventType.MouseMove)
+                        {
+                            await Task.Delay(replaySpeed);
+                        }
                         break;
 
                     case InputEventType.MouseLeftClick:
