@@ -1,14 +1,26 @@
 ﻿.vs/਍ⸯ獶਍
 .vs/
 packages/
+
+#Trying to have bin and obj ignored 
+
+bin
+obj
+
+bin/
+obj/
 obj/Debug/
 bin/Debug/
-input-replayer/bin/Debug/
-input-replayer/obj/Debug/
+input-replayer/bin/
+input-replayer/obj/
+input-replayer/bin/Debug
+input-replayer/obj/Debug
+input-replayer/input-replayer/bin
+input-replayer/input-replayer/obj
+input-replayer/input-replayer/bin/Debug
+input-replayer/input-replayer/obj/Debug
 
-bin\Debug\
-obj\Debug\
-input-replayer\input-replayer\bin\Debug\
-input-replayer\input-replayer\obj\Debug\
-input-replayer\input-replayer\bin\
-input-replayer\input-replayer\obj\
+input-replayer.exe
+input-replayer.pdb
+input-replayer.csproj.AssemblyReference.cache
+
