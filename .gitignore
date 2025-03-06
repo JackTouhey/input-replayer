@@ -1,13 +1,12 @@
 ﻿.vs/਍ⸯ獶਍
 .vs/
 packages/
-obj/
-bin/
-input-replayer/bin/
-input-replayer/obj/
-input-replayer/obj/Debug
+obj/Debug/
+bin/Debug/
+input-replayer/bin/Debug/
+input-replayer/obj/Debug/
 
-bin\
-obj\
-input-replayer\bin\
-input-replayer\obj\
+bin\Debug\
+obj\Debug\
+input-replayer\bin\Debug\
+input-replayer\obj\Debug\
