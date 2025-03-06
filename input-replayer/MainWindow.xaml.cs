@@ -233,7 +233,7 @@ namespace input_replayer
                 StatusText.Text = $"Loaded {_recordedInputEvents.Count} events.";
             }
         }
-
+        
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
             if (_recordedInputEvents.Count == 0)
