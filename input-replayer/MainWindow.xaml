@@ -33,6 +33,15 @@
             <Button Content="Load Recording" 
                     Click="LoadRecording_Click" 
                     Padding="10,5"/>
+            
+            <Slider x:Name="SpeedSlider"
+              Value="100" Minimum="1" Maximum="1000"
+              SmallChange="1" LargeChange="10" 
+              Width="150" Height="75"      
+                    />
+            <TextBlock x:Name="SpeedDisplay"
+                       Text="{Binding ElementName=SpeedSlider,Path=Value}" />
+            
         </StackPanel>
 
         <TextBlock x:Name="StatusText" 
@@ -40,5 +49,7 @@
                    Text="Ready to record..." 
                    VerticalAlignment="Top" 
                    Margin="0,20,0,0"/>
+        
+
     </Grid>
 </Window>

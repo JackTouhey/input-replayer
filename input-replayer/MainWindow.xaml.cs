@@ -29,6 +29,8 @@ namespace input_replayer
         KeyRelease
     }
 
+    
+
     public class RecordedInputEvent
     {
         public DateTime Timestamp { get; set; }
@@ -236,17 +238,20 @@ namespace input_replayer
         
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
+            double replaySpeedDouble = SpeedSlider.Value;
+            int replaySpeed = Convert.ToInt32(replaySpeedDouble);
+
             if (_recordedInputEvents.Count == 0)
             {
                 MessageBox.Show("No events to replay.");
                 return;
             }
-
+            
             DateTime baseTime = _recordedInputEvents[0].Timestamp;
 
             foreach (var inputEvent in _recordedInputEvents)
             {
-                await Task.Delay(100);
+                await Task.Delay(replaySpeed);
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
