@@ -253,10 +253,14 @@ namespace input_replayer
                     case InputEventType.MouseMove:
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
-                        if (_recordedInputEvents[nextItem].EventType != InputEventType.MouseMove)
+                        if (nextItem < _recordedInputEvents.Count)
                         {
-                            await Task.Delay(replaySpeed);
+                            if (_recordedInputEvents[nextItem].EventType != InputEventType.MouseMove)
+                            {
+                                await Task.Delay(replaySpeed);
+                            }
                         }
+                        
                         break;
 
                     case InputEventType.MouseLeftClick:
