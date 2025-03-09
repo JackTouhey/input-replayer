@@ -85,6 +85,11 @@ namespace input_replayer
             InitializeComponent();
         }
 
+        void OnSpeedInputClick(object sender, RoutedEventArgs e)
+        {
+
+        }
+
         private IntPtr ProcessMouseInput(int nCode, IntPtr wParam, IntPtr lParam)
         {
             if (nCode >= 0 && _isRecordingInputEvents)
