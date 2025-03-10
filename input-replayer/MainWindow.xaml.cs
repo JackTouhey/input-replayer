@@ -105,6 +105,7 @@ namespace input_replayer
             if (IsTextAllowed(SpeedInputText))
             {
                 VerifiedSpeedInput = SpeedInputText;
+                SpeedDisplay.Text = SpeedInputText;
                 SpeedButtonLastClicked = true;
             }
             else
@@ -264,8 +265,17 @@ namespace input_replayer
         
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
-            double replaySpeedDouble = SpeedSlider.Value;
-            int replaySpeed = Convert.ToInt32(replaySpeedDouble);
+            int replaySpeed = 100;
+            
+            if (SpeedButtonLastClicked)
+            {
+                replaySpeed = Convert.ToInt32(VerifiedSpeedInput);
+            }
+            else
+            {
+                double replaySpeedDouble = SpeedSlider.Value;
+                replaySpeed = Convert.ToInt32(replaySpeedDouble);
+            }
 
             if (_recordedInputEvents.Count == 0)
             {
