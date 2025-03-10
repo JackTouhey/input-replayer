@@ -17,6 +17,7 @@ using System.Timers;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using System.Text.RegularExpressions;
 
 namespace input_replayer
 {
@@ -80,14 +81,36 @@ namespace input_replayer
         private List<RecordedInputEvent> _recordedInputEvents = new List<RecordedInputEvent>();
         private bool _isRecordingInputEvents = false;
 
+        //Speed Management fields
+        private static readonly Regex _regex = new Regex(@"^[0-9]+$");
+        private bool SpeedButtonLastClicked = false;
+        private string VerifiedSpeedInput = "";
         public MainWindow()
         {
             InitializeComponent();
         }
 
+        private bool IsTextAllowed(string text)
+        {
+            return _regex.IsMatch(text);
+        }
+        void OnSpeedSliderClick(object sender, RoutedEventArgs e)
+        {
+            SpeedButtonLastClicked = false;
+        }
         void OnSpeedInputClick(object sender, RoutedEventArgs e)
         {
-
+            
+            string SpeedInputText = SpeedInput.Text;
+            if (IsTextAllowed(SpeedInputText))
+            {
+                VerifiedSpeedInput = SpeedInputText;
+                SpeedButtonLastClicked = true;
+            }
+            else
+            {
+                MessageBox.Show("Please enter a valid integer");
+            }
         }
 
         private IntPtr ProcessMouseInput(int nCode, IntPtr wParam, IntPtr lParam)

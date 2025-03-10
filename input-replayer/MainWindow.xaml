@@ -37,12 +37,13 @@
                 <Slider x:Name="SpeedSlider"
                   Value="100" Minimum="1" Maximum="1000"
                   SmallChange="1" LargeChange="10" 
-                  Width="150" Height="75" Margin="0,0,0,-40"      
+                  Width="150" Height="75" Margin="0,0,0,-40"  
+                        ValueChanged="OnSpeedSliderClick"
                         />
                 <TextBlock x:Name="SpeedDisplay" Margin="0,0,0,20"
                            Text="{Binding ElementName=SpeedSlider,Path=Value}" />
                 <TextBox x:Name="SpeedInput"/>
-                <Button x:Name="SpeedInputButton" Click="Release" Content="Change Speed"/>
+                <Button x:Name="SpeedInputButton" Click="OnSpeedInputClick" ClickMode="Release" Content="Change Speed"/>
 
 
             </StackPanel>
