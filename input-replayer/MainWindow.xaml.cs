@@ -96,11 +96,26 @@ namespace input_replayer
         }
         void OnSpeedSliderClick(object sender, RoutedEventArgs e)
         {
-            SpeedButtonLastClicked = false;
+            try
+            {
+                SpeedButtonLastClicked = false;
+                Slider speedSlider = sender as Slider;
+                if(speedSlider != null)
+                {
+                    double speedSliderValue = speedSlider.Value;
+                    if(SpeedDisplay != null)
+                    {
+                        SpeedDisplay.Text = speedSliderValue.ToString("F0");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("OnSpeedSliderClick Error: " + ex);
+            }            
         }
         void OnSpeedInputClick(object sender, RoutedEventArgs e)
         {
-            
             string SpeedInputText = SpeedInput.Text;
             if (IsTextAllowed(SpeedInputText))
             {

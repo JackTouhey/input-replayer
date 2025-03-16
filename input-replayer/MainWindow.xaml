@@ -41,7 +41,7 @@
                         ValueChanged="OnSpeedSliderClick"
                         />
                 <TextBlock x:Name="SpeedDisplay" Margin="0,0,0,20"
-                           Text="{Binding ElementName=SpeedSlider,Path=Value}" />
+                           Text="100" />
                 <TextBox x:Name="SpeedInput"/>
                 <Button x:Name="SpeedInputButton" Click="OnSpeedInputClick" ClickMode="Release" Content="Change Speed"/>
 
