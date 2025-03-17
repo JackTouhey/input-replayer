@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Management;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace input_replayer
 {
@@ -15,17 +16,13 @@ namespace input_replayer
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool IsWindowVisible(IntPtr hWnd);
 
-        // Dictionary to track processes and their visibility status
-        private Dictionary<int, bool> processVisibilityStatus = new Dictionary<int, bool>();
-
-        // Track recently started processes
-        private List<ProcessInfo> recentlyStartedProcesses = new List<ProcessInfo>();
-
         // Lock object for thread safety
         private readonly object _lock = new object();
 
         private ManagementEventWatcher processStartWatcher;
         private bool isMonitoring = false;
+
+        private bool isNewProcess = false;
 
         // Class to store process information
         private class ProcessInfo
@@ -38,32 +35,7 @@ namespace input_replayer
 
         public ProcessMonitor()
         {
-            // Initialize by taking a snapshot of current processes
-            CaptureInitialProcessState();
-
-            // Set up WMI event watcher for process start events
             SetupProcessWatcher();
-        }
-
-        private void CaptureInitialProcessState()
-        {
-            lock (_lock)
-            {
-                processVisibilityStatus.Clear();
-                foreach (Process process in Process.GetProcesses())
-                {
-                    try
-                    {
-                        bool isVisible = process.MainWindowHandle != IntPtr.Zero &&
-                                         IsWindowVisible(process.MainWindowHandle);
-                        processVisibilityStatus[process.Id] = isVisible;
-                    }
-                    catch
-                    {
-                        // Ignore any processes we can't access
-                    }
-                }
-            }
         }
 
         private void SetupProcessWatcher()
@@ -81,7 +53,7 @@ namespace input_replayer
             }
         }
 
-        private void ProcessStartWatcher_EventArrived(object sender, EventArrivedEventArgs e)
+        private async void ProcessStartWatcher_EventArrived(object sender, EventArrivedEventArgs e)
         {
             try
             {
@@ -92,21 +64,10 @@ namespace input_replayer
                 string processNameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(processName);
 
                 Debug.WriteLine($"New process detected: {processNameWithoutExt} (PID: {processId})");
-
-                // Record this as a newly started process
-                lock (_lock)
-                {
-                    recentlyStartedProcesses.Add(new ProcessInfo
-                    {
-                        ProcessId = processId,
-                        ProcessName = processNameWithoutExt,
-                        StartTime = DateTime.Now,
-                        IsFullyLoaded = false
-                    });
-
-                    // Add to visibility tracking
-                    processVisibilityStatus[processId] = false;
-                }
+                isNewProcess = true;
+                Console.WriteLine("isNewProcess: " + isNewProcess);
+                await Task.Delay(2000);
+                isNewProcess = false;
             }
             catch (Exception ex)
             {
@@ -132,6 +93,11 @@ namespace input_replayer
             }
         }
 
+        public bool GetIsNewProcess()
+        {
+            return isNewProcess;
+        }   
+
         // Stop monitoring for new processes
         public void StopMonitoring()
         {
@@ -148,138 +114,6 @@ namespace input_replayer
                     Debug.WriteLine($"Error stopping process monitoring: {ex.Message}");
                 }
             }
-        }
-
-        // Check if any new processes are starting
-        public bool IsAnyProcessStarting()
-        {
-            CleanupOldProcesses();
-
-            lock (_lock)
-            {
-                // Check if we have any recently started processes that aren't fully loaded
-                if (recentlyStartedProcesses.Any(p => !p.IsFullyLoaded))
-                    return true;
-
-                // Also check if any processes exist but aren't visible yet
-                foreach (var pid in processVisibilityStatus.Keys.ToList())
-                {
-                    try
-                    {
-                        Process process = Process.GetProcessById(pid);
-
-                        // If process has a window but it's not visible yet, it's still starting
-                        if (process.MainWindowHandle != IntPtr.Zero &&
-                            !IsWindowVisible(process.MainWindowHandle) &&
-                            !processVisibilityStatus[pid])
-                        {
-                            return true;
-                        }
-                    }
-                    catch
-                    {
-                        // Process might have exited, remove it from our tracking
-                        processVisibilityStatus.Remove(pid);
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        // Remove processes that have been tracked for too long
-        private void CleanupOldProcesses()
-        {
-            lock (_lock)
-            {
-                // Remove processes older than 30 seconds from our tracking
-                var now = DateTime.Now;
-                recentlyStartedProcesses.RemoveAll(p =>
-                    (now - p.StartTime).TotalSeconds > 30 || p.IsFullyLoaded);
-            }
-        }
-
-        // Wait for all starting processes to be fully loaded
-        public bool WaitForAllProcessesToLoad(int timeoutMs = 10000)
-        {
-            var startTime = DateTime.Now;
-            bool allLoaded = false;
-
-            while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMs && !allLoaded)
-            {
-                allLoaded = true;
-                CleanupOldProcesses();
-
-                lock (_lock)
-                {
-                    // Check all recently started processes
-                    foreach (var processInfo in recentlyStartedProcesses.ToList())
-                    {
-                        try
-                        {
-                            Process process = Process.GetProcessById(processInfo.ProcessId);
-
-                            // Check if the main window handle is valid and visible
-                            bool isVisible = process.MainWindowHandle != IntPtr.Zero &&
-                                            IsWindowVisible(process.MainWindowHandle);
-
-                            if (isVisible)
-                            {
-                                // Process is fully loaded
-                                processInfo.IsFullyLoaded = true;
-                                processVisibilityStatus[process.Id] = true;
-                                Debug.WriteLine($"Process {processInfo.ProcessName} is now loaded and visible!");
-                            }
-                            else
-                            {
-                                // At least one process is still loading
-                                allLoaded = false;
-                            }
-                        }
-                        catch
-                        {
-                            // Process might have exited, mark it as done
-                            processInfo.IsFullyLoaded = true;
-                        }
-                    }
-
-                    // Also check for any processes that might be starting but weren't caught by our event watcher
-                    foreach (var pid in processVisibilityStatus.Keys.ToList())
-                    {
-                        if (!processVisibilityStatus[pid])
-                        {
-                            try
-                            {
-                                Process process = Process.GetProcessById(pid);
-                                bool isVisible = process.MainWindowHandle != IntPtr.Zero &&
-                                                IsWindowVisible(process.MainWindowHandle);
-
-                                processVisibilityStatus[pid] = isVisible;
-
-                                if (!isVisible && process.MainWindowHandle != IntPtr.Zero)
-                                {
-                                    // Process has a window but it's not visible yet
-                                    allLoaded = false;
-                                }
-                            }
-                            catch
-                            {
-                                // Process might have exited, remove it from our tracking
-                                processVisibilityStatus.Remove(pid);
-                            }
-                        }
-                    }
-                }
-
-                // If we're still waiting, sleep a bit
-                if (!allLoaded)
-                    Thread.Sleep(100);
-            }
-
-            if (!allLoaded)
-                Debug.WriteLine("Timeout waiting for all processes to load");
-
-            return allLoaded;
         }
 
         // Clean up resources

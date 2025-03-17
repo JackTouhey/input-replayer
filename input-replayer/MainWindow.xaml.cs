@@ -18,6 +18,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace input_replayer
 {
@@ -85,9 +86,24 @@ namespace input_replayer
         private static readonly Regex _regex = new Regex(@"^[0-9]+$");
         private bool SpeedButtonLastClicked = false;
         private string VerifiedSpeedInput = "";
+
+        ProcessMonitor processMonitor = new ProcessMonitor();
         public MainWindow()
         {
             InitializeComponent();
+
+            Loaded += MainWindow_Loaded;
+            Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            processMonitor.StartMonitoring();
+        }
+
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            processMonitor.Dispose();
         }
 
         private bool IsTextAllowed(string text)
@@ -300,7 +316,12 @@ namespace input_replayer
 
             foreach (var inputEvent in _recordedInputEvents)
             {
-                
+                while (processMonitor.GetIsNewProcess())
+                {
+                    Console.WriteLine("Awaiting process load");
+                    await Task.Delay(replaySpeed);
+                }
+
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
