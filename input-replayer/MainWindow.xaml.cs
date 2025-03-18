@@ -18,6 +18,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Windows.Interop;
 
 namespace input_replayer
 {
@@ -71,11 +72,23 @@ namespace input_replayer
         [DllImport("user32.dll")]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
 
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
         // Hook-related fields
         private IntPtr _keyboardHookHandle = IntPtr.Zero;
         private IntPtr _mouseHookHandle = IntPtr.Zero;
         private NativeMethods.LowLevelKeyboardProc _keyboardHookProcedure;
         private NativeMethods.LowLevelMouseProc _mouseHookProcedure;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT = 0x0004;
+        private const uint VK_R = 0x52;
+        private const int HOTKEY_ID = 9000;
+        private IntPtr _windowHandle;
+        private HwndSource _source;
 
         // Recording management
         private List<RecordedInputEvent> _recordedInputEvents = new List<RecordedInputEvent>();
@@ -88,6 +101,45 @@ namespace input_replayer
         public MainWindow()
         {
             InitializeComponent();
+            this.Loaded += (sender, e) => RegisterGlobalHotKey();
+            this.Closed += (sender, e) => UnregisterGlobalHotKey();
+        }
+
+        private void RegisterGlobalHotKey()
+        {
+            _windowHandle = new WindowInteropHelper(this).Handle;
+            _source = HwndSource.FromHwnd(_windowHandle);
+            _source.AddHook(HwndHook);
+
+            // Register Ctrl+Shift+R hotkey
+            RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, VK_R);
+        }
+
+        private void UnregisterGlobalHotKey()
+        {
+            // Unregister the hotkey
+            UnregisterHotKey(_windowHandle, HOTKEY_ID);
+            _source.RemoveHook(HwndHook);
+        }
+        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_HOTKEY = 0x0312;
+
+            // Listen for hotkey message
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            {
+                // Execute your hotkey action here
+                OnHotkeyPressed();
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+        private void OnHotkeyPressed()
+        {
+            // This method will be called when Ctrl+Shift+R is pressed
+            // Add your code here
+            MessageBox.Show("Ctrl+Shift+R was pressed!");
         }
 
         private bool IsTextAllowed(string text)
