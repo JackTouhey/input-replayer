@@ -93,6 +93,7 @@ namespace input_replayer
         // Recording management
         private List<RecordedInputEvent> _recordedInputEvents = new List<RecordedInputEvent>();
         private bool _isRecordingInputEvents = false;
+        private bool _isReplayingEvents = false;
 
         //Speed Management fields
         private static readonly Regex _regex = new Regex(@"^[0-9]+$");
@@ -132,13 +133,15 @@ namespace input_replayer
         }
         private void OnHotkeyPressed()
         {
-            if (_isRecordingInputEvents)
+            if (_isRecordingInputEvents && !_isReplayingEvents)
             {
+                Console.WriteLine("HotkeyPressed: Stopping recording, _isReplayingEvents: " + _isReplayingEvents);
                 StopRecording_Click(null, null);
                 _isRecordingInputEvents = false;
             }
-            else
+            else if (!_isReplayingEvents)
             {
+                Console.WriteLine("HotkeyPressed: Starting recording, _isReplayingEvents: " + _isReplayingEvents); 
                 StartRecording_Click(null, null);
                 _isRecordingInputEvents = true;
             }
@@ -221,16 +224,15 @@ namespace input_replayer
 
         private void StartRecording_Click(object sender, RoutedEventArgs e)
         {
+            Console.WriteLine("StartRecording_click");
             if (!_isRecordingInputEvents)
             {
                 _recordedInputEvents.Clear();
                 _isRecordingInputEvents = true;
 
-                // Setup keyboard hook
                 _keyboardHookProcedure = ProcessKeyboardInput;
                 _keyboardHookHandle = SetKeyboardHook(_keyboardHookProcedure);
 
-                // Setup mouse hook
                 _mouseHookProcedure = ProcessMouseInput;
                 _mouseHookHandle = SetMouseHook(_mouseHookProcedure);
 
@@ -240,6 +242,7 @@ namespace input_replayer
 
         private void StopRecording_Click(object sender, RoutedEventArgs e)
         {
+            Console.WriteLine("StopRecording_Click");
             if (_isRecordingInputEvents)
             {
                 // Unhook both keyboard and mouse
@@ -334,8 +337,10 @@ namespace input_replayer
         
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
+            _isReplayingEvents = true;
+            Console.WriteLine("ReplayRecording_click, _isReplayingEvents: " + _isReplayingEvents);
             int replaySpeed = 100;
-            
+
             if (SpeedButtonLastClicked)
             {
                 replaySpeed = Convert.ToInt32(VerifiedSpeedInput);
@@ -351,7 +356,7 @@ namespace input_replayer
                 MessageBox.Show("No events to replay.");
                 return;
             }
-
+            
             foreach (var inputEvent in _recordedInputEvents)
             {
                 
@@ -395,6 +400,9 @@ namespace input_replayer
                         break;
                 }
             }
+            await Task.Delay(2000);
+            _isReplayingEvents = false;
+            Console.WriteLine("Ending Replay, _isReplayingEvents: " + _isReplayingEvents);
         }
 
         private static class NativeMethods
