@@ -68,6 +68,7 @@ namespace input_replayer
                 Console.WriteLine("isNewProcess: " + isNewProcess);
                 await Task.Delay(2000);
                 isNewProcess = false;
+                Console.WriteLine("isNewProcess: " + isNewProcess);
             }
             catch (Exception ex)
             {
