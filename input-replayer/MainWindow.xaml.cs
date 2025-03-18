@@ -110,14 +110,11 @@ namespace input_replayer
             _windowHandle = new WindowInteropHelper(this).Handle;
             _source = HwndSource.FromHwnd(_windowHandle);
             _source.AddHook(HwndHook);
-
-            // Register Ctrl+Shift+R hotkey
             RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, VK_R);
         }
 
         private void UnregisterGlobalHotKey()
         {
-            // Unregister the hotkey
             UnregisterHotKey(_windowHandle, HOTKEY_ID);
             _source.RemoveHook(HwndHook);
         }
@@ -125,10 +122,8 @@ namespace input_replayer
         {
             const int WM_HOTKEY = 0x0312;
 
-            // Listen for hotkey message
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
-                // Execute your hotkey action here
                 OnHotkeyPressed();
                 handled = true;
             }
@@ -137,9 +132,14 @@ namespace input_replayer
         }
         private void OnHotkeyPressed()
         {
-            // This method will be called when Ctrl+Shift+R is pressed
-            // Add your code here
-            MessageBox.Show("Ctrl+Shift+R was pressed!");
+            if (_isRecordingInputEvents)
+            {
+                StopRecording_Click(null, null);
+            }
+            else
+            {
+                StartRecording_Click(null, null);
+            }
         }
 
         private bool IsTextAllowed(string text)
@@ -393,11 +393,8 @@ namespace input_replayer
                         break;
                 }
             }
-
-            MessageBox.Show("Replay completed.");
         }
 
-        // Native methods class (kept from previous implementation)
         private static class NativeMethods
         {
             [StructLayout(LayoutKind.Sequential)]
