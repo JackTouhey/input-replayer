@@ -135,10 +135,12 @@ namespace input_replayer
             if (_isRecordingInputEvents)
             {
                 StopRecording_Click(null, null);
+                _isRecordingInputEvents = false;
             }
             else
             {
                 StartRecording_Click(null, null);
+                _isRecordingInputEvents = true;
             }
         }
 
