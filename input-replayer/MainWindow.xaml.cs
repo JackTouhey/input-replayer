@@ -19,6 +19,7 @@ using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Interop;
+using System.Diagnostics;
 
 namespace input_replayer
 {
@@ -85,7 +86,9 @@ namespace input_replayer
         private NativeMethods.LowLevelMouseProc _mouseHookProcedure;
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
-        private const uint VK_R = 0x52;
+        private const int VK_R = 0x52;
+        private const int VK_CONTROL = 0x11;
+        private const int VK_LSHIFT = 0xA0;
         private const int HOTKEY_ID = 9000;
         private IntPtr _windowHandle;
         private HwndSource _source;
@@ -118,17 +121,19 @@ namespace input_replayer
         {
             UnregisterHotKey(_windowHandle, HOTKEY_ID);
             _source.RemoveHook(HwndHook);
+
         }
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
 
+            // Listen for hotkey message
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
+                // Execute your hotkey action here
                 OnHotkeyPressed();
                 handled = true;
             }
-
             return IntPtr.Zero;
         }
         private void OnHotkeyPressed()
@@ -370,6 +375,7 @@ namespace input_replayer
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
+                        Console.WriteLine("Replaying Input: Mouse Move");
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
                         if (nextItem < _recordedInputEvents.Count)
@@ -383,6 +389,7 @@ namespace input_replayer
                         break;
 
                     case InputEventType.MouseLeftClick:
+                        Console.WriteLine("Replaying Input: Left Click");
                         await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
@@ -390,6 +397,7 @@ namespace input_replayer
                         break;
 
                     case InputEventType.MouseRightClick:
+                        Console.WriteLine("Replaying Input: Right Click");
                         await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
@@ -397,11 +405,13 @@ namespace input_replayer
                         break;
 
                     case InputEventType.KeyPress:
+                        Console.WriteLine("Replaying Input: Key Press - " + inputEvent.VirtualKeyCode);
                         await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
                         break;
 
                     case InputEventType.KeyRelease:
+                        Console.WriteLine("Replaying Input: Key Release - " + inputEvent.VirtualKeyCode);
                         await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
                         break;
