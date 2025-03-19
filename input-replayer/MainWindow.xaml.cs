@@ -227,9 +227,12 @@ namespace input_replayer
             Console.WriteLine("StartRecording_click");
             if (!_isRecordingInputEvents)
             {
-                _recordedInputEvents.Clear();
+                if (sender != "Appending Method")
+                {
+                    Console.WriteLine("Not Appending Method");
+                    _recordedInputEvents.Clear();
+                }
                 _isRecordingInputEvents = true;
-
                 _keyboardHookProcedure = ProcessKeyboardInput;
                 _keyboardHookHandle = SetKeyboardHook(_keyboardHookProcedure);
 
@@ -242,16 +245,27 @@ namespace input_replayer
 
         private void StopRecording_Click(object sender, RoutedEventArgs e)
         {
-            Console.WriteLine("StopRecording_Click");
+            Console.WriteLine("StopRecording_Click"); 
             if (_isRecordingInputEvents)
             {
-                // Unhook both keyboard and mouse
                 NativeMethods.UnhookWindowsHookEx(_keyboardHookHandle);
                 NativeMethods.UnhookWindowsHookEx(_mouseHookHandle);
 
                 _isRecordingInputEvents = false;
                 StatusText.Text = $"Recording stopped. Captured {_recordedInputEvents.Count} events.";
             }
+        }
+
+        private async void SingleInput_Click(object sender, RoutedEventArgs e)
+        {
+            int currentInputs = _recordedInputEvents.Count;
+            StartRecording_Click("Appending Method", null);
+            while(_recordedInputEvents.Count == currentInputs)
+            {
+                Console.WriteLine("In loop waiting for input");
+                await Task.Delay(25);
+            }
+            StopRecording_Click(null, null);
         }
 
         private IntPtr SetKeyboardHook(NativeMethods.LowLevelKeyboardProc procedure)
