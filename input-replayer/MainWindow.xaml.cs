@@ -172,19 +172,19 @@ namespace input_replayer
                 { 
                     index = i;
                     hotkeyPresent = true;
-                }
-                bool isEventReleased = IsEventReleased(_recordedInputEvents[i].EventType);
-                if (_recordedInputEvents[i].VirtualKeyCode == 82 )
-                {
-                    rClosed = isEventReleased;
-                }
-                else if (_recordedInputEvents[i].VirtualKeyCode == 160)
-                {
-                    shftClosed = isEventReleased;
-                }
-                else if (_recordedInputEvents[i].VirtualKeyCode == 162)
-                {
-                    ctrlClosed = isEventReleased;
+                    bool isEventReleased = IsEventReleased(_recordedInputEvents[i].EventType);
+                    if (_recordedInputEvents[i].VirtualKeyCode == 82)
+                    {
+                        rClosed = isEventReleased;
+                    }
+                    else if (_recordedInputEvents[i].VirtualKeyCode == 160)
+                    {
+                        shftClosed = isEventReleased;
+                    }
+                    else if (_recordedInputEvents[i].VirtualKeyCode == 162)
+                    {
+                        ctrlClosed = isEventReleased;
+                    }
                 }
             }
             
