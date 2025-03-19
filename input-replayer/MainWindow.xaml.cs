@@ -87,8 +87,6 @@ namespace input_replayer
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
         private const int VK_R = 0x52;
-        private const int VK_CONTROL = 0x11;
-        private const int VK_LSHIFT = 0xA0;
         private const int HOTKEY_ID = 9000;
         private IntPtr _windowHandle;
         private HwndSource _source;
@@ -121,16 +119,13 @@ namespace input_replayer
         {
             UnregisterHotKey(_windowHandle, HOTKEY_ID);
             _source.RemoveHook(HwndHook);
-
         }
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
 
-            // Listen for hotkey message
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
-                // Execute your hotkey action here
                 OnHotkeyPressed();
                 handled = true;
             }
@@ -149,6 +144,54 @@ namespace input_replayer
                 Console.WriteLine("HotkeyPressed: Starting recording, _isReplayingEvents: " + _isReplayingEvents); 
                 StartRecording_Click(null, null);
                 _isRecordingInputEvents = true;
+            }
+        }
+
+        private bool CleanRecording()
+        {
+            HashSet<int> hotkeyIDs = new HashSet<int>();
+            hotkeyIDs.Add(82);
+            hotkeyIDs.Add(160);
+            hotkeyIDs.Add(162);
+
+            int index = -1;
+            bool hotkeyPresent = false;
+
+            for(int i = 0; i < _recordedInputEvents.Count - 3; i++)
+            {
+                HashSet<int> codon = new HashSet<int>();
+                codon.Add(_recordedInputEvents[i].VirtualKeyCode);
+                codon.Add(_recordedInputEvents[i+1].VirtualKeyCode);
+                codon.Add(_recordedInputEvents[i+2].VirtualKeyCode);
+
+                if (codon.SetEquals(hotkeyIDs))
+                { 
+                    index = i;
+                    hotkeyPresent = true;
+                }  
+            }
+            if (hotkeyPresent)
+            {
+                Console.WriteLine("Trimming hotkeys");
+                for (int i = 0; i < 3; i++)
+                {
+                    _recordedInputEvents.RemoveAt(index);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        void CleanRecordingClick(object sender, EventArgs e)
+        {
+            bool hotkeyPresent = CleanRecording();
+            if (hotkeyPresent)
+            {
+                MessageBox.Show("Hotkey signature successfully removed");
+            }
+            else
+            {
+                MessageBox.Show("No Hotkey found - recording is clean");
             }
         }
 
@@ -261,7 +304,7 @@ namespace input_replayer
             }
         }
 
-        private void AppendInput_Click(object sender, RoutedEventArgs e)
+        private void AppendInputClick(object sender, RoutedEventArgs e)
         {
             StartRecording_Click("Appending Method", null);
         }
