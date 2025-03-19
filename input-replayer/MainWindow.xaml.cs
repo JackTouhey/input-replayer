@@ -18,6 +18,7 @@ using System.Windows.Threading;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
+using System.Windows.Interop;
 
 namespace input_replayer
 {
@@ -71,15 +72,28 @@ namespace input_replayer
         [DllImport("user32.dll")]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, int dwExtraInfo);
 
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
         // Hook-related fields
         private IntPtr _keyboardHookHandle = IntPtr.Zero;
         private IntPtr _mouseHookHandle = IntPtr.Zero;
         private NativeMethods.LowLevelKeyboardProc _keyboardHookProcedure;
         private NativeMethods.LowLevelMouseProc _mouseHookProcedure;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT = 0x0004;
+        private const uint VK_R = 0x52;
+        private const int HOTKEY_ID = 9000;
+        private IntPtr _windowHandle;
+        private HwndSource _source;
 
         // Recording management
         private List<RecordedInputEvent> _recordedInputEvents = new List<RecordedInputEvent>();
         private bool _isRecordingInputEvents = false;
+        private bool _isReplayingEvents = false;
 
         //Speed Management fields
         private static readonly Regex _regex = new Regex(@"^[0-9]+$");
@@ -88,6 +102,49 @@ namespace input_replayer
         public MainWindow()
         {
             InitializeComponent();
+            this.Loaded += (sender, e) => RegisterGlobalHotKey();
+            this.Closed += (sender, e) => UnregisterGlobalHotKey();
+        }
+
+        private void RegisterGlobalHotKey()
+        {
+            _windowHandle = new WindowInteropHelper(this).Handle;
+            _source = HwndSource.FromHwnd(_windowHandle);
+            _source.AddHook(HwndHook);
+            RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, VK_R);
+        }
+
+        private void UnregisterGlobalHotKey()
+        {
+            UnregisterHotKey(_windowHandle, HOTKEY_ID);
+            _source.RemoveHook(HwndHook);
+        }
+        private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_HOTKEY = 0x0312;
+
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            {
+                OnHotkeyPressed();
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+        private void OnHotkeyPressed()
+        {
+            if (_isRecordingInputEvents && !_isReplayingEvents)
+            {
+                Console.WriteLine("HotkeyPressed: Stopping recording, _isReplayingEvents: " + _isReplayingEvents);
+                StopRecording_Click(null, null);
+                _isRecordingInputEvents = false;
+            }
+            else if (!_isReplayingEvents)
+            {
+                Console.WriteLine("HotkeyPressed: Starting recording, _isReplayingEvents: " + _isReplayingEvents); 
+                StartRecording_Click(null, null);
+                _isRecordingInputEvents = true;
+            }
         }
 
         private bool IsTextAllowed(string text)
@@ -167,16 +224,15 @@ namespace input_replayer
 
         private void StartRecording_Click(object sender, RoutedEventArgs e)
         {
+            Console.WriteLine("StartRecording_click");
             if (!_isRecordingInputEvents)
             {
                 _recordedInputEvents.Clear();
                 _isRecordingInputEvents = true;
 
-                // Setup keyboard hook
                 _keyboardHookProcedure = ProcessKeyboardInput;
                 _keyboardHookHandle = SetKeyboardHook(_keyboardHookProcedure);
 
-                // Setup mouse hook
                 _mouseHookProcedure = ProcessMouseInput;
                 _mouseHookHandle = SetMouseHook(_mouseHookProcedure);
 
@@ -186,6 +242,7 @@ namespace input_replayer
 
         private void StopRecording_Click(object sender, RoutedEventArgs e)
         {
+            Console.WriteLine("StopRecording_Click");
             if (_isRecordingInputEvents)
             {
                 // Unhook both keyboard and mouse
@@ -280,8 +337,10 @@ namespace input_replayer
         
         private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
         {
+            _isReplayingEvents = true;
+            Console.WriteLine("ReplayRecording_click, _isReplayingEvents: " + _isReplayingEvents);
             int replaySpeed = 100;
-            
+
             if (SpeedButtonLastClicked)
             {
                 replaySpeed = Convert.ToInt32(VerifiedSpeedInput);
@@ -297,7 +356,7 @@ namespace input_replayer
                 MessageBox.Show("No events to replay.");
                 return;
             }
-
+            
             foreach (var inputEvent in _recordedInputEvents)
             {
                 
@@ -341,11 +400,11 @@ namespace input_replayer
                         break;
                 }
             }
-
-            MessageBox.Show("Replay completed.");
+            await Task.Delay(2000);
+            _isReplayingEvents = false;
+            Console.WriteLine("Ending Replay, _isReplayingEvents: " + _isReplayingEvents);
         }
 
-        // Native methods class (kept from previous implementation)
         private static class NativeMethods
         {
             [StructLayout(LayoutKind.Sequential)]
