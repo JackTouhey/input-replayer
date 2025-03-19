@@ -153,9 +153,13 @@ namespace input_replayer
             hotkeyIDs.Add(82);
             hotkeyIDs.Add(160);
             hotkeyIDs.Add(162);
+            bool hotkeyRemoved = false;
 
             int index = -1;
             bool hotkeyPresent = false;
+            bool ctrlClosed = true;
+            bool shftClosed = true;
+            bool rClosed = true;
 
             for(int i = 0; i < _recordedInputEvents.Count - 3; i++)
             {
@@ -168,8 +172,22 @@ namespace input_replayer
                 { 
                     index = i;
                     hotkeyPresent = true;
-                }  
+                }
+                bool isEventReleased = IsEventReleased(_recordedInputEvents[i].EventType);
+                if (_recordedInputEvents[i].VirtualKeyCode == 82 )
+                {
+                    rClosed = isEventReleased;
+                }
+                else if (_recordedInputEvents[i].VirtualKeyCode == 160)
+                {
+                    shftClosed = isEventReleased;
+                }
+                else if (_recordedInputEvents[i].VirtualKeyCode == 162)
+                {
+                    ctrlClosed = isEventReleased;
+                }
             }
+            
             if (hotkeyPresent)
             {
                 Console.WriteLine("Trimming hotkeys");
@@ -177,9 +195,48 @@ namespace input_replayer
                 {
                     _recordedInputEvents.RemoveAt(index);
                 }
+                hotkeyRemoved = true;
+            }
+            if (!ctrlClosed)
+            {
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 162,
+                });
+            }
+            if (!shftClosed)
+            {
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 160,
+                });
+            }
+            if (!rClosed)
+            {
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 82,
+                });
+            }
+            return hotkeyRemoved;
+        }
+
+        private bool IsEventReleased(InputEventType input)
+        {
+            if (input == InputEventType.KeyRelease)
+            {
                 return true;
             }
-            return false;
+            else
+            {
+                return false;
+            }
         }
 
         void CleanRecordingClick(object sender, EventArgs e)
