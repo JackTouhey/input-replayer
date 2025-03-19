@@ -161,7 +161,7 @@ namespace input_replayer
             bool shftClosed = true;
             bool rClosed = true;
 
-            for(int i = 0; i < _recordedInputEvents.Count - 3; i++)
+            for(int i = 0; i < _recordedInputEvents.Count - 2; i++)
             {
                 HashSet<int> codon = new HashSet<int>();
                 codon.Add(_recordedInputEvents[i].VirtualKeyCode);
@@ -172,18 +172,19 @@ namespace input_replayer
                 { 
                     index = i;
                     hotkeyPresent = true;
-                    bool isEventReleased = IsEventReleased(_recordedInputEvents[i].EventType);
+                    bool isEventRelease = IsEventRelease(_recordedInputEvents[i].EventType);
+                    Console.WriteLine("Event type: " + _recordedInputEvents[i].EventType.ToString() + " isEventRelease: " + isEventRelease);
                     if (_recordedInputEvents[i].VirtualKeyCode == 82)
                     {
-                        rClosed = isEventReleased;
+                        rClosed = isEventRelease;
                     }
                     else if (_recordedInputEvents[i].VirtualKeyCode == 160)
                     {
-                        shftClosed = isEventReleased;
+                        shftClosed = isEventRelease;
                     }
                     else if (_recordedInputEvents[i].VirtualKeyCode == 162)
                     {
-                        ctrlClosed = isEventReleased;
+                        ctrlClosed = isEventRelease;
                     }
                 }
             }
@@ -197,6 +198,7 @@ namespace input_replayer
                 }
                 hotkeyRemoved = true;
             }
+            Console.WriteLine("rClosed: " + rClosed + " ctrlClosed: " + ctrlClosed + " shftClosed: " + shftClosed);
             if (!ctrlClosed)
             {
                 _recordedInputEvents.Add(new RecordedInputEvent
@@ -227,7 +229,7 @@ namespace input_replayer
             return hotkeyRemoved;
         }
 
-        private bool IsEventReleased(InputEventType input)
+        private bool IsEventRelease(InputEventType input)
         {
             if (input == InputEventType.KeyRelease)
             {
