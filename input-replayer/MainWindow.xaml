@@ -20,8 +20,8 @@
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
-            <Button Content="Add Single Input" 
-                    Click="SingleInput_Click" 
+            <Button Content="Append Inputs" 
+                    Click="AppendInput_Click" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
