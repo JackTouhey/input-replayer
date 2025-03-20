@@ -19,6 +19,7 @@ using Microsoft.Win32;
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Interop;
+using System.Diagnostics;
 
 namespace input_replayer
 {
@@ -85,7 +86,7 @@ namespace input_replayer
         private NativeMethods.LowLevelMouseProc _mouseHookProcedure;
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
-        private const uint VK_R = 0x52;
+        private const int VK_R = 0x52;
         private const int HOTKEY_ID = 9000;
         private IntPtr _windowHandle;
         private HwndSource _source;
@@ -128,7 +129,6 @@ namespace input_replayer
                 OnHotkeyPressed();
                 handled = true;
             }
-
             return IntPtr.Zero;
         }
         private void OnHotkeyPressed()
@@ -144,6 +144,72 @@ namespace input_replayer
                 Console.WriteLine("HotkeyPressed: Starting recording, _isReplayingEvents: " + _isReplayingEvents); 
                 StartRecording_Click(null, null);
                 _isRecordingInputEvents = true;
+            }
+        }
+
+        private void CleanRecording()
+        {
+            bool ctrlClosed = true;
+            bool shftClosed = true;
+            bool rClosed = true;
+
+            for(int i = 0; i < _recordedInputEvents.Count; i++)
+            {
+                if (_recordedInputEvents[i].VirtualKeyCode == 82)
+                {
+                    rClosed = IsEventRelease(_recordedInputEvents[i].EventType);
+                }
+                else if (_recordedInputEvents[i].VirtualKeyCode == 160)
+                {
+                    shftClosed = IsEventRelease(_recordedInputEvents[i].EventType);
+                }
+                else if (_recordedInputEvents[i].VirtualKeyCode == 162)
+                {
+                    ctrlClosed = IsEventRelease(_recordedInputEvents[i].EventType);
+                }
+            }
+            Console.WriteLine("rClosed: " + rClosed + " ctrlClosed: " + ctrlClosed + " shftClosed: " + shftClosed);
+            if (!ctrlClosed)
+            {
+                Console.WriteLine("Adding ctrl release");
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 162,
+                });
+            }
+            if (!shftClosed)
+            {
+                Console.WriteLine("Adding shft release");
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 160,
+                });
+            }
+            if (!rClosed)
+            {
+                Console.WriteLine("Adding r release");
+                _recordedInputEvents.Add(new RecordedInputEvent
+                {
+                    Timestamp = DateTime.Now,
+                    EventType = InputEventType.KeyRelease,
+                    VirtualKeyCode = 82,
+                });
+            }
+        }
+
+        private bool IsEventRelease(InputEventType input)
+        {
+            if (input == InputEventType.KeyRelease)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
@@ -253,19 +319,13 @@ namespace input_replayer
 
                 _isRecordingInputEvents = false;
                 StatusText.Text = $"Recording stopped. Captured {_recordedInputEvents.Count} events.";
+                CleanRecording();
             }
         }
 
-        private async void SingleInput_Click(object sender, RoutedEventArgs e)
+        private void AppendInputClick(object sender, RoutedEventArgs e)
         {
-            int currentInputs = _recordedInputEvents.Count;
             StartRecording_Click("Appending Method", null);
-            while(_recordedInputEvents.Count == currentInputs)
-            {
-                Console.WriteLine("In loop waiting for input");
-                await Task.Delay(25);
-            }
-            StopRecording_Click(null, null);
         }
 
         private IntPtr SetKeyboardHook(NativeMethods.LowLevelKeyboardProc procedure)
@@ -377,6 +437,7 @@ namespace input_replayer
                 switch (inputEvent.EventType)
                 {
                     case InputEventType.MouseMove:
+                        Console.WriteLine("Replaying Input: Mouse Move");
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
                         if (nextItem < _recordedInputEvents.Count)
@@ -390,6 +451,7 @@ namespace input_replayer
                         break;
 
                     case InputEventType.MouseLeftClick:
+                        Console.WriteLine("Replaying Input: Left Click");
                         await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
@@ -397,6 +459,7 @@ namespace input_replayer
                         break;
 
                     case InputEventType.MouseRightClick:
+                        Console.WriteLine("Replaying Input: Right Click");
                         await Task.Delay(replaySpeed);
                         SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
                         mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
@@ -404,11 +467,13 @@ namespace input_replayer
                         break;
 
                     case InputEventType.KeyPress:
+                        Console.WriteLine("Replaying Input: Key Press - " + inputEvent.VirtualKeyCode);
                         await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
                         break;
 
                     case InputEventType.KeyRelease:
+                        Console.WriteLine("Replaying Input: Key Release - " + inputEvent.VirtualKeyCode);
                         await Task.Delay(replaySpeed);
                         keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
                         break;

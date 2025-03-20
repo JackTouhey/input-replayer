@@ -4,7 +4,7 @@
         Title="Global Input Recorder" Height="450" Width="1000">
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="100"/>
+            <RowDefinition Height="150"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -20,8 +20,8 @@
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
-            <Button Content="Add Single Input" 
-                    Click="SingleInput_Click" 
+            <Button Content="Append Inputs" 
+                    Click="AppendInputClick" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
@@ -46,7 +46,7 @@
                   Width="150" Height="75" Margin="0,0,0,-40"  
                         ValueChanged="OnSpeedSliderClick"
                         />
-                <TextBlock x:Name="SpeedDisplay" Margin="0,0,0,20"
+                <TextBlock x:Name="SpeedDisplay" Margin="0,0,0,0"
                            Text="100" />
                 <TextBox x:Name="SpeedInput"/>
                 <Button x:Name="SpeedInputButton" Click="OnSpeedInputClick" ClickMode="Release" Content="Change Speed"/>
