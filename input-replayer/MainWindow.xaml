@@ -25,11 +25,6 @@
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
-            <Button Content="Clean Recording" 
-                Click="CleanRecordingClick" 
-                Margin="0,0,10,0" 
-                Padding="10,5"/>
-
             <Button Content="Replay Recording" 
                     Click="ReplayRecording_Click" 
                     Margin="0,0,10,0" 

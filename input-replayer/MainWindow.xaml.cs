@@ -213,11 +213,6 @@ namespace input_replayer
             }
         }
 
-        void CleanRecordingClick(object sender, EventArgs e)
-        {
-            CleanRecording();
-        }
-
         private bool IsTextAllowed(string text)
         {
             return _regex.IsMatch(text);
@@ -324,6 +319,7 @@ namespace input_replayer
 
                 _isRecordingInputEvents = false;
                 StatusText.Text = $"Recording stopped. Captured {_recordedInputEvents.Count} events.";
+                CleanRecording();
             }
         }
 
