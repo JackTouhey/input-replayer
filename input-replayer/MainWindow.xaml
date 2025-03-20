@@ -4,7 +4,7 @@
         Title="Global Input Recorder" Height="450" Width="1000">
     <Grid Margin="20">
         <Grid.RowDefinitions>
-            <RowDefinition Height="120"/>
+            <RowDefinition Height="150"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>

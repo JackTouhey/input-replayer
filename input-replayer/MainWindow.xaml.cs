@@ -147,60 +147,31 @@ namespace input_replayer
             }
         }
 
-        private bool CleanRecording()
+        private void CleanRecording()
         {
-            HashSet<int> hotkeyIDs = new HashSet<int>();
-            hotkeyIDs.Add(82);
-            hotkeyIDs.Add(160);
-            hotkeyIDs.Add(162);
-            bool hotkeyRemoved = false;
-
-            int index = -1;
-            bool hotkeyPresent = false;
             bool ctrlClosed = true;
             bool shftClosed = true;
             bool rClosed = true;
 
-            for(int i = 0; i < _recordedInputEvents.Count - 2; i++)
+            for(int i = 0; i < _recordedInputEvents.Count; i++)
             {
-                HashSet<int> codon = new HashSet<int>();
-                codon.Add(_recordedInputEvents[i].VirtualKeyCode);
-                codon.Add(_recordedInputEvents[i+1].VirtualKeyCode);
-                codon.Add(_recordedInputEvents[i+2].VirtualKeyCode);
-
-                if (codon.SetEquals(hotkeyIDs))
-                { 
-                    index = i;
-                    hotkeyPresent = true;
-                    bool isEventRelease = IsEventRelease(_recordedInputEvents[i].EventType);
-                    Console.WriteLine("Event type: " + _recordedInputEvents[i].EventType.ToString() + " isEventRelease: " + isEventRelease);
-                    if (_recordedInputEvents[i].VirtualKeyCode == 82)
-                    {
-                        rClosed = isEventRelease;
-                    }
-                    else if (_recordedInputEvents[i].VirtualKeyCode == 160)
-                    {
-                        shftClosed = isEventRelease;
-                    }
-                    else if (_recordedInputEvents[i].VirtualKeyCode == 162)
-                    {
-                        ctrlClosed = isEventRelease;
-                    }
-                }
-            }
-            
-            if (hotkeyPresent)
-            {
-                Console.WriteLine("Trimming hotkeys");
-                for (int i = 0; i < 3; i++)
+                if (_recordedInputEvents[i].VirtualKeyCode == 82)
                 {
-                    _recordedInputEvents.RemoveAt(index);
+                    rClosed = IsEventRelease(_recordedInputEvents[i].EventType);
                 }
-                hotkeyRemoved = true;
+                else if (_recordedInputEvents[i].VirtualKeyCode == 160)
+                {
+                    shftClosed = IsEventRelease(_recordedInputEvents[i].EventType);
+                }
+                else if (_recordedInputEvents[i].VirtualKeyCode == 162)
+                {
+                    ctrlClosed = IsEventRelease(_recordedInputEvents[i].EventType);
+                }
             }
             Console.WriteLine("rClosed: " + rClosed + " ctrlClosed: " + ctrlClosed + " shftClosed: " + shftClosed);
             if (!ctrlClosed)
             {
+                Console.WriteLine("Adding ctrl release");
                 _recordedInputEvents.Add(new RecordedInputEvent
                 {
                     Timestamp = DateTime.Now,
@@ -210,6 +181,7 @@ namespace input_replayer
             }
             if (!shftClosed)
             {
+                Console.WriteLine("Adding shft release");
                 _recordedInputEvents.Add(new RecordedInputEvent
                 {
                     Timestamp = DateTime.Now,
@@ -219,6 +191,7 @@ namespace input_replayer
             }
             if (!rClosed)
             {
+                Console.WriteLine("Adding r release");
                 _recordedInputEvents.Add(new RecordedInputEvent
                 {
                     Timestamp = DateTime.Now,
@@ -226,7 +199,6 @@ namespace input_replayer
                     VirtualKeyCode = 82,
                 });
             }
-            return hotkeyRemoved;
         }
 
         private bool IsEventRelease(InputEventType input)
@@ -243,15 +215,7 @@ namespace input_replayer
 
         void CleanRecordingClick(object sender, EventArgs e)
         {
-            bool hotkeyPresent = CleanRecording();
-            if (hotkeyPresent)
-            {
-                MessageBox.Show("Hotkey signature successfully removed");
-            }
-            else
-            {
-                MessageBox.Show("No Hotkey found - recording is clean");
-            }
+            CleanRecording();
         }
 
         private bool IsTextAllowed(string text)
