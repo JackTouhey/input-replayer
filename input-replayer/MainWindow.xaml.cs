@@ -496,7 +496,9 @@ namespace input_replayer
                 return;
             }
 
-            while (repeatStatus)
+            bool firstReplay = true;
+
+            while (repeatStatus || firstReplay)
             {
                 foreach (var inputEvent in _recordedInputEvents)
                 {
@@ -547,6 +549,7 @@ namespace input_replayer
                     }
                 }
                 await Task.Delay(2000);
+                firstReplay = false;
             }
             _isReplayingEvents = false;
             Console.WriteLine("Ending Replay, _isReplayingEvents: " + _isReplayingEvents);
