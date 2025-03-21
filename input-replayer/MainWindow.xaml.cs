@@ -20,6 +20,8 @@ using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 using System.Windows.Interop;
 using System.Diagnostics;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace input_replayer
 {
@@ -41,6 +43,25 @@ namespace input_replayer
         public int VirtualKeyCode { get; set; }
         public bool IsExtendedKey { get; set; }
     }
+
+    //public class RepeatStatusText: INotifyPropertyChanged
+    //{
+    //    private string repeatText;
+    //    public event PropertyChangedEventHandler PropertyChanged;
+    //    private void NotifyPropertyChanged([CallerMemberName] String propertyName = "")
+    //    {
+    //        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    //    }
+    //    public string RepeatText
+    //    {
+    //        get { return repeatText; }
+    //        set
+    //        {
+    //            repeatText = value;
+    //            NotifyPropertyChanged();
+    //        }
+    //    }
+    //}
 
     public partial class MainWindow : Window
     {
@@ -87,7 +108,9 @@ namespace input_replayer
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
         private const int VK_R = 0x52;
-        private const int HOTKEY_ID = 9000;
+        private const int VK_L = 0x4C;
+        private const int HOTKEY_ID1 = 9000;
+        private const int HOTKEY_ID2 = 9001;
         private IntPtr _windowHandle;
         private HwndSource _source;
 
@@ -100,9 +123,13 @@ namespace input_replayer
         private static readonly Regex _regex = new Regex(@"^[0-9]+$");
         private bool SpeedButtonLastClicked = false;
         private string VerifiedSpeedInput = "";
+
+        private bool repeatStatus = false;
+
         public MainWindow()
         {
             InitializeComponent();
+
             this.Loaded += (sender, e) => RegisterGlobalHotKey();
             this.Closed += (sender, e) => UnregisterGlobalHotKey();
         }
@@ -112,39 +139,63 @@ namespace input_replayer
             _windowHandle = new WindowInteropHelper(this).Handle;
             _source = HwndSource.FromHwnd(_windowHandle);
             _source.AddHook(HwndHook);
-            RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, VK_R);
+            RegisterHotKey(_windowHandle, HOTKEY_ID1, MOD_CONTROL | MOD_SHIFT, VK_R);
+            RegisterHotKey(_windowHandle, HOTKEY_ID2, MOD_CONTROL | MOD_SHIFT, VK_L);
         }
 
         private void UnregisterGlobalHotKey()
         {
-            UnregisterHotKey(_windowHandle, HOTKEY_ID);
+            UnregisterHotKey(_windowHandle, HOTKEY_ID1);
+            UnregisterHotKey(_windowHandle, HOTKEY_ID2);
             _source.RemoveHook(HwndHook);
         }
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             const int WM_HOTKEY = 0x0312;
 
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            int hotkeyId = wParam.ToInt32();    
+
+            if (msg == WM_HOTKEY)
             {
-                OnHotkeyPressed();
-                handled = true;
+                if(hotkeyId == HOTKEY_ID1)
+                {
+                    OnRecordingHotkeyPressed();
+                    handled = true;
+                }
+                else if(hotkeyId == HOTKEY_ID2)
+                {
+                    OnRepeatHotkeyPressed();
+                    handled = true;
+                }
+                
             }
+            
             return IntPtr.Zero;
         }
-        private void OnHotkeyPressed()
+        private void OnRecordingHotkeyPressed()
         {
             if (_isRecordingInputEvents && !_isReplayingEvents)
             {
                 Console.WriteLine("HotkeyPressed: Stopping recording, _isReplayingEvents: " + _isReplayingEvents);
-                StopRecording_Click(null, null);
+                StopRecordingClick(null, null);
                 _isRecordingInputEvents = false;
             }
             else if (!_isReplayingEvents)
             {
                 Console.WriteLine("HotkeyPressed: Starting recording, _isReplayingEvents: " + _isReplayingEvents); 
-                StartRecording_Click(null, null);
+                StartRecordingClick(null, null);
                 _isRecordingInputEvents = true;
             }
+        }
+
+        private void OnRepeatHotkeyPressed()
+        {
+            MessageBox.Show("Repeat Hotkey Pressed");
+        }
+
+        private void RepeatRecordingClick(object sender, RoutedEventArgs e)
+        {
+
         }
 
         private void CleanRecording()
@@ -288,7 +339,7 @@ namespace input_replayer
             return NativeMethods.CallNextHookEx(_mouseHookHandle, nCode, wParam, lParam);
         }
 
-        private void StartRecording_Click(object sender, RoutedEventArgs e)
+        private void StartRecordingClick(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("StartRecording_click");
             if (!_isRecordingInputEvents)
@@ -309,7 +360,7 @@ namespace input_replayer
             }
         }
 
-        private void StopRecording_Click(object sender, RoutedEventArgs e)
+        private void StopRecordingClick(object sender, RoutedEventArgs e)
         {
             Console.WriteLine("StopRecording_Click"); 
             if (_isRecordingInputEvents)
@@ -325,7 +376,7 @@ namespace input_replayer
 
         private void AppendInputClick(object sender, RoutedEventArgs e)
         {
-            StartRecording_Click("Appending Method", null);
+            StartRecordingClick("Appending Method", null);
         }
 
         private IntPtr SetKeyboardHook(NativeMethods.LowLevelKeyboardProc procedure)
@@ -378,7 +429,7 @@ namespace input_replayer
             return NativeMethods.CallNextHookEx(_keyboardHookHandle, nCode, wParam, lParam);
         }
 
-        private void SaveRecording_Click(object sender, RoutedEventArgs e)
+        private void SaveRecordingClick(object sender, RoutedEventArgs e)
         {
             var saveFileDialog = new SaveFileDialog
             {
@@ -394,7 +445,7 @@ namespace input_replayer
             }
         }
 
-        private void LoadRecording_Click(object sender, RoutedEventArgs e)
+        private void LoadRecordingClick(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new OpenFileDialog
             {
@@ -409,7 +460,7 @@ namespace input_replayer
             }
         }
         
-        private async void ReplayRecording_Click(object sender, RoutedEventArgs e)
+        private async void ReplayRecordingClick(object sender, RoutedEventArgs e)
         {
             _isReplayingEvents = true;
             Console.WriteLine("ReplayRecording_click, _isReplayingEvents: " + _isReplayingEvents);

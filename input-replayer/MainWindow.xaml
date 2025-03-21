@@ -1,4 +1,5 @@
 ﻿<Window x:Class="input_replayer.MainWindow"
+        x:Name="Display"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Global Input Recorder" Height="450" Width="1000">
@@ -11,12 +12,12 @@
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
             <Button Content="Start Recording" 
-                    Click="StartRecording_Click" 
+                    Click="StartRecordingClick" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
             <Button Content="Stop Recording" 
-                    Click="StopRecording_Click" 
+                    Click="StopRecordingClick" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
@@ -26,17 +27,22 @@
                     Padding="10,5"/>
 
             <Button Content="Replay Recording" 
-                    Click="ReplayRecording_Click" 
+                    Click="ReplayRecordingClick" 
+                    Margin="0,0,10,0" 
+                    Padding="10,5"/>
+
+            <Button Content="Toggle Repeat" 
+                    Click="RepeatRecordingClick" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
             <Button Content="Save Recording" 
-                    Click="SaveRecording_Click" 
+                    Click="SaveRecordingClick" 
                     Margin="0,0,10,0" 
                     Padding="10,5"/>
 
             <Button Content="Load Recording" 
-                    Click="LoadRecording_Click" 
+                    Click="LoadRecordingClick" 
                     Padding="10,5"/>
             <StackPanel Grid.Row="0" Orientation="Vertical" Margin="20,0,0,0">
                 
@@ -58,7 +64,13 @@
                    Grid.Row="1" 
                    Text="Ready to record..." 
                    VerticalAlignment="Top" 
-                   Margin="0,20,0,0"/>
+                   Margin="0,0,0,0"/>
+        
+        <TextBlock x:Name="RepeatStatusText" 
+           Grid.Row="1" 
+           Text="Repeat: Off" 
+           VerticalAlignment="Top" 
+           Margin="0,20,0,0"/>
         
 
     </Grid>
