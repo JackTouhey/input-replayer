@@ -495,56 +495,59 @@ namespace input_replayer
                 MessageBox.Show("No events to replay.");
                 return;
             }
-            
-            foreach (var inputEvent in _recordedInputEvents)
+
+            while (repeatStatus)
             {
-                
-                switch (inputEvent.EventType)
+                foreach (var inputEvent in _recordedInputEvents)
                 {
-                    case InputEventType.MouseMove:
-                        Console.WriteLine("Replaying Input: Mouse Move");
-                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
-                        int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
-                        if (nextItem < _recordedInputEvents.Count)
-                        {
-                            if (_recordedInputEvents[nextItem].EventType != InputEventType.MouseMove)
+
+                    switch (inputEvent.EventType)
+                    {
+                        case InputEventType.MouseMove:
+                            Console.WriteLine("Replaying Input: Mouse Move");
+                            SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                            int nextItem = _recordedInputEvents.IndexOf(inputEvent) + 1;
+                            if (nextItem < _recordedInputEvents.Count)
                             {
-                                await Task.Delay(replaySpeed);
+                                if (_recordedInputEvents[nextItem].EventType != InputEventType.MouseMove)
+                                {
+                                    await Task.Delay(replaySpeed);
+                                }
                             }
-                        }
-                        
-                        break;
 
-                    case InputEventType.MouseLeftClick:
-                        Console.WriteLine("Replaying Input: Left Click");
-                        await Task.Delay(replaySpeed);
-                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
-                        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-                        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
-                        break;
+                            break;
 
-                    case InputEventType.MouseRightClick:
-                        Console.WriteLine("Replaying Input: Right Click");
-                        await Task.Delay(replaySpeed);
-                        SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
-                        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-                        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-                        break;
+                        case InputEventType.MouseLeftClick:
+                            Console.WriteLine("Replaying Input: Left Click");
+                            await Task.Delay(replaySpeed);
+                            SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+                            break;
 
-                    case InputEventType.KeyPress:
-                        Console.WriteLine("Replaying Input: Key Press - " + inputEvent.VirtualKeyCode);
-                        await Task.Delay(replaySpeed);
-                        keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
-                        break;
+                        case InputEventType.MouseRightClick:
+                            Console.WriteLine("Replaying Input: Right Click");
+                            await Task.Delay(replaySpeed);
+                            SetCursorPos(inputEvent.PositionX, inputEvent.PositionY);
+                            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                            break;
 
-                    case InputEventType.KeyRelease:
-                        Console.WriteLine("Replaying Input: Key Release - " + inputEvent.VirtualKeyCode);
-                        await Task.Delay(replaySpeed);
-                        keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
-                        break;
+                        case InputEventType.KeyPress:
+                            Console.WriteLine("Replaying Input: Key Press - " + inputEvent.VirtualKeyCode);
+                            await Task.Delay(replaySpeed);
+                            keybd_event((byte)inputEvent.VirtualKeyCode, 0, 0, 0);
+                            break;
+
+                        case InputEventType.KeyRelease:
+                            Console.WriteLine("Replaying Input: Key Release - " + inputEvent.VirtualKeyCode);
+                            await Task.Delay(replaySpeed);
+                            keybd_event((byte)inputEvent.VirtualKeyCode, 0, KEYEVENTF_KEYUP, 0);
+                            break;
+                    }
                 }
+                await Task.Delay(2000);
             }
-            await Task.Delay(2000);
             _isReplayingEvents = false;
             Console.WriteLine("Ending Replay, _isReplayingEvents: " + _isReplayingEvents);
         }
