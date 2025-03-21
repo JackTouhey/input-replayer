@@ -190,12 +190,26 @@ namespace input_replayer
 
         private void OnRepeatHotkeyPressed()
         {
-            MessageBox.Show("Repeat Hotkey Pressed");
+            ToggleRepeat();
         }
 
         private void RepeatRecordingClick(object sender, RoutedEventArgs e)
         {
+            ToggleRepeat();
+        }
 
+        private void ToggleRepeat()
+        {
+            if (repeatStatus)
+            {
+                repeatStatus = false;
+                RepeatStatusText.Text = "Repeat: Off";
+            }
+            else
+            {
+                repeatStatus = true;
+                RepeatStatusText.Text = "Repeat: On";
+            }
         }
 
         private void CleanRecording()
